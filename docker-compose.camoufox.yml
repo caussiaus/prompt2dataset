@@ -1,14 +1,14 @@
 version: "3.8"
 services:
-  agent-gateway:
+  camoufox:
     build:
       context: .
-      dockerfile: Dockerfile.agent-gateway
-    container_name: agent-gateway
+      dockerfile: Dockerfile.camoufox
+    container_name: camoufox
     ports:
-      - "7000:7000"
+      - "7004:7004"
     volumes:
-      - /data/agent-gateway:/app/logs
+      - /data/camoufox:/app/logs
     networks:
       - shared-network
     restart: unless-stopped

@@ -1,14 +1,14 @@
 version: "3.8"
 services:
-  agent-gateway:
+  vision-agent:
     build:
       context: .
-      dockerfile: Dockerfile.agent-gateway
-    container_name: agent-gateway
+      dockerfile: Dockerfile.vision-agent
+    container_name: vision-agent
     ports:
-      - "7000:7000"
+      - "7003:7003"
     volumes:
-      - /data/agent-gateway:/app/logs
+      - /data/vision-agent:/app/logs
     networks:
       - shared-network
     restart: unless-stopped

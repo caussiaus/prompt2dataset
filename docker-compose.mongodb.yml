@@ -1,15 +1,15 @@
-version: '3.8'
+version: "3.8"
 services:
   mongodb:
-    image: mongo:7.0
+    image: mongo:latest
     container_name: mongodb
-    volumes:
-      - /data/mongodb:/data/db
     ports:
       - "27017:27017"
+    volumes:
+      - /data/mongodb:/data/db
     networks:
       - shared-network
-
+    restart: unless-stopped
 networks:
   shared-network:
     external: true

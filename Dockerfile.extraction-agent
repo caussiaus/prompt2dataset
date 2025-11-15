@@ -1,0 +1,6 @@
+FROM python:3.11-slim
+WORKDIR /app
+RUN pip install fastapi uvicorn httpx pydantic
+COPY agent_extraction.py .
+EXPOSE 7002
+CMD ["uvicorn", "agent_extraction:app", "--host", "0.0.0.0", "--port", "7002"]

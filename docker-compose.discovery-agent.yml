@@ -1,14 +1,14 @@
 version: "3.8"
 services:
-  agent-gateway:
+  discovery-agent:
     build:
       context: .
-      dockerfile: Dockerfile.agent-gateway
-    container_name: agent-gateway
+      dockerfile: Dockerfile.discovery-agent
+    container_name: discovery-agent
     ports:
-      - "7000:7000"
+      - "7001:7001"
     volumes:
-      - /data/agent-gateway:/app/logs
+      - /data/discovery-agent:/app/logs
     networks:
       - shared-network
     restart: unless-stopped

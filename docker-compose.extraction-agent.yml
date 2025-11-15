@@ -1,14 +1,14 @@
 version: "3.8"
 services:
-  agent-gateway:
+  extraction-agent:
     build:
       context: .
-      dockerfile: Dockerfile.agent-gateway
-    container_name: agent-gateway
+      dockerfile: Dockerfile.extraction-agent
+    container_name: extraction-agent
     ports:
-      - "7000:7000"
+      - "7002:7002"
     volumes:
-      - /data/agent-gateway:/app/logs
+      - /data/extraction-agent:/app/logs
     networks:
       - shared-network
     restart: unless-stopped
