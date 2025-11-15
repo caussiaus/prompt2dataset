@@ -1,0 +1,247 @@
+version: '3.8'
+
+services:
+  # MongoDB - Database for storing scraping results
+  mongodb:
+    image: mongo:7.0
+    container_name: webscraper-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-changeme}
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - scraper-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis - Caching and task queue
+  redis:
+    image: redis:7-alpine
+    container_name: webscraper-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - scraper-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Ollama - AI model serving
+  ollama:
+    image: ollama/ollama:latest
+    container_name: webscraper-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - scraper-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Model Manager - Downloads and manages AI models
+  model-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile.model-manager
+    container_name: webscraper-model-manager
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - MONGODB_URL=mongodb://mongodb:27017
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - models_data:/models
+    ports:
+      - "8005:8005"
+    networks:
+      - scraper-network
+    depends_on:
+      - ollama
+      - mongodb
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Discovery Agent - Web crawling and discovery
+  discovery-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.discovery
+    container_name: webscraper-discovery
+    restart: unless-stopped
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - REDIS_URL=redis://redis:6379
+    ports:
+      - "8001:8001"
+    networks:
+      - scraper-network
+    depends_on:
+      - mongodb
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Extraction Agent - Data extraction with LLMs
+  extraction-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.extraction
+    container_name: webscraper-extraction
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - MONGODB_URL=mongodb://mongodb:27017
+      - REDIS_URL=redis://redis:6379
+      - LLM_MODEL=${LLM_MODEL:-llama3.1}
+    ports:
+      - "8002:8002"
+    networks:
+      - scraper-network
+    depends_on:
+      - ollama
+      - mongodb
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Vision Agent - Image processing and VQA
+  vision-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.vision
+    container_name: webscraper-vision
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - MONGODB_URL=mongodb://mongodb:27017
+      - REDIS_URL=redis://redis:6379
+      - VISION_MODEL=${VISION_MODEL:-llava}
+    ports:
+      - "8003:8003"
+    networks:
+      - scraper-network
+    depends_on:
+      - ollama
+      - mongodb
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Camoufox Agent - Browser automation
+  camoufox-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.camoufox
+    container_name: webscraper-camoufox
+    restart: unless-stopped
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - REDIS_URL=redis://redis:6379
+    ports:
+      - "8004:8004"
+    networks:
+      - scraper-network
+    depends_on:
+      - mongodb
+      - redis
+    shm_size: 2gb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Gateway - Main API orchestrator
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: webscraper-gateway
+    restart: unless-stopped
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - REDIS_URL=redis://redis:6379
+      - OLLAMA_HOST=http://ollama:11434
+      - DISCOVERY_URL=http://discovery-agent:8001
+      - EXTRACTION_URL=http://extraction-agent:8002
+      - VISION_URL=http://vision-agent:8003
+      - CAMOUFOX_URL=http://camoufox-agent:8004
+      - MODEL_MANAGER_URL=http://model-manager:8005
+      - VISION_MODEL=${VISION_MODEL:-llava}
+      - LLM_MODEL=${LLM_MODEL:-llama3.1}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-bge-m3}
+      - CODE_MODEL=${CODE_MODEL:-deepseek-coder}
+      - RAG_MODEL=${RAG_MODEL:-llama3-chatqa}
+    volumes:
+      - scraper_data:/data
+    ports:
+      - "8000:8000"
+    networks:
+      - scraper-network
+    depends_on:
+      - mongodb
+      - redis
+      - ollama
+      - model-manager
+      - discovery-agent
+      - extraction-agent
+      - vision-agent
+      - camoufox-agent
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  scraper-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+  ollama_models:
+    driver: local
+  models_data:
+    driver: local
+  scraper_data:
+    driver: local

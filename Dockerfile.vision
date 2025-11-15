@@ -2,29 +2,26 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install Playwright dependencies and browsers
+# Install system dependencies for image processing
 RUN apt-get update && apt-get install -y \
     curl \
-    wget \
-    gnupg \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright browsers
-RUN playwright install --with-deps firefox
-
 # Copy application code
-COPY config.py models.py agent_camoufox.py ./
+COPY config.py models.py agent_vision.py ./
 
 # Expose port
-EXPOSE 8004
+EXPOSE 8003
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8004/health || exit 1
+    CMD curl -f http://localhost:8003/health || exit 1
 
 # Run application
-CMD ["uvicorn", "agent_camoufox:app", "--host", "0.0.0.0", "--port", "8004"]
+CMD ["uvicorn", "agent_vision:app", "--host", "0.0.0.0", "--port", "8003"]
