@@ -1,23 +1,25 @@
 """
-Agent Camoufox - Browser automation and rendering with anti-detection
+Agent Camoufox - Browser automation and rendering with anti-detection using Camoufox
 """
 import os
+import sys
 import asyncio
 import base64
 from typing import Optional, Dict, Any
 from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from playwright.async_api import async_playwright, Browser, Page
 import logging
+
+# Add Camoufox to path
+sys.path.insert(0, '/app/camoufox/pythonlib')
+
+from camoufox.async_api import AsyncCamoufox
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Agent Camoufox", version="1.0.0")
-
-# Global browser instance
-browser: Optional[Browser] = None
 
 # Models
 class RenderRequest(BaseModel):
@@ -28,6 +30,7 @@ class RenderRequest(BaseModel):
     full_page: bool = Field(True, description="Full page screenshot")
     javascript: Optional[str] = Field(None, description="JavaScript to execute")
     viewport: Optional[Dict[str, int]] = Field(None, description="Viewport size")
+    config: Optional[Dict[str, Any]] = Field(None, description="Camoufox fingerprint config")
 
 class RenderResponse(BaseModel):
     url: str
@@ -37,97 +40,76 @@ class RenderResponse(BaseModel):
 
 @app.on_event("startup")
 async def startup():
-    """Initialize browser on startup"""
-    global browser
-    try:
-        playwright = await async_playwright().start()
-        browser = await playwright.chromium.launch(
-            headless=True,
-            args=[
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--disable-gpu',
-                '--window-size=1920,1080'
-            ]
-        )
-        logger.info("Browser initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize browser: {e}")
-        raise
+    """Initialize on startup"""
+    logger.info("Camoufox agent started")
 
 @app.on_event("shutdown")
 async def shutdown():
-    """Close browser on shutdown"""
-    global browser
-    if browser:
-        await browser.close()
-        logger.info("Browser closed")
+    """Cleanup on shutdown"""
+    logger.info("Camoufox agent stopped")
 
 @app.get("/health")
 async def health():
     return {
         "status": "ok",
         "agent": "camoufox",
-        "browser_ready": browser is not None,
         "timestamp": datetime.utcnow().isoformat()
     }
 
 @app.post("/render", response_model=RenderResponse)
 async def render_page(request: RenderRequest):
-    """Render a web page and return HTML + screenshot"""
-    if not browser:
-        raise HTTPException(status_code=503, detail="Browser not initialized")
-    
+    """Render a web page using Camoufox with advanced anti-detection"""
     try:
-        logger.info(f"Rendering {request.url}")
+        logger.info(f"Rendering {request.url} with Camoufox")
         
-        # Create new context with anti-detection features
-        context = await browser.new_context(
-            viewport=request.viewport or {"width": 1920, "height": 1080},
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            locale="en-US",
-            timezone_id="America/New_York",
-            geolocation={"latitude": 40.7128, "longitude": -74.0060},
-            permissions=["geolocation"]
-        )
+        # Prepare Camoufox config with fingerprint rotation
+        camoufox_config = request.config or {}
         
-        page = await context.new_page()
+        # Set viewport if provided
+        if request.viewport:
+            camoufox_config['window.innerWidth'] = request.viewport['width']
+            camoufox_config['window.innerHeight'] = request.viewport['height']
         
-        # Navigate to URL
-        await page.goto(
-            request.url,
-            wait_until=request.wait_for,
-            timeout=request.timeout
-        )
-        
-        # Execute custom JavaScript if provided
-        if request.javascript:
-            await page.evaluate(request.javascript)
-            await asyncio.sleep(1)  # Wait for JS execution
-        
-        # Get HTML content
-        html = await page.content()
-        
-        # Take screenshot if requested
-        screenshot_base64 = None
-        if request.screenshot:
-            screenshot_bytes = await page.screenshot(
-                full_page=request.full_page,
-                type="png"
+        # Launch Camoufox with fingerprint rotation
+        async with AsyncCamoufox(
+            config=camoufox_config,
+            headless=True,
+            humanize=True,  # Enable human-like mouse movement
+            geoip=True  # Enable geolocation based on proxy
+        ) as browser:
+            page = await browser.new_page()
+            
+            # Navigate to URL
+            await page.goto(
+                request.url,
+                wait_until=request.wait_for,
+                timeout=request.timeout
             )
-            screenshot_base64 = base64.b64encode(screenshot_bytes).decode('utf-8')
-        
-        # Collect metadata
-        metadata = {
-            "title": await page.title(),
-            "final_url": page.url,
-            "viewport": await page.viewport_size(),
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        
-        await context.close()
+            
+            # Execute custom JavaScript if provided
+            if request.javascript:
+                await page.evaluate(request.javascript)
+                await asyncio.sleep(1)  # Wait for JS execution
+            
+            # Get HTML content
+            html = await page.content()
+            
+            # Take screenshot if requested
+            screenshot_base64 = None
+            if request.screenshot:
+                screenshot_bytes = await page.screenshot(
+                    full_page=request.full_page,
+                    type="png"
+                )
+                screenshot_base64 = base64.b64encode(screenshot_bytes).decode('utf-8')
+            
+            # Collect metadata
+            metadata = {
+                "title": await page.title(),
+                "final_url": page.url,
+                "timestamp": datetime.utcnow().isoformat(),
+                "camoufox_config": camoufox_config
+            }
         
         logger.info(f"Successfully rendered {request.url}")
         
