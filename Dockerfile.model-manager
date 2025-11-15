@@ -1,0 +1,18 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install httpx
+RUN pip install --no-cache-dir httpx
+
+# Copy application
+COPY model_manager.py .
+COPY models.config .
+
+# Run model download on container start
+CMD ["python", "model_manager.py"]

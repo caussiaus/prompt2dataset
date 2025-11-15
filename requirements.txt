@@ -1,17 +1,36 @@
-fastapi
-uvicorn
-httpx
-pydantic
-playwright
-camoufox[geoip]
-transformers
-ollama
-numpy
-pillow
-PyYAML
-pymongo
-psycopg2-binary
-redis
-aiofiles
-matplotlib
-tqdm
+# Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# HTTP Client
+httpx==0.25.1
+
+# Data Validation
+pydantic==2.5.0
+
+# Database
+pymongo==4.6.0
+motor==3.3.2
+
+# Browser Automation
+playwright==1.40.0
+camoufox[geoip]==0.2.3
+
+# AI/ML
+ollama==0.1.7
+transformers==4.36.0
+torch==2.1.1
+pillow==10.1.0
+
+# HTML Parsing
+beautifulsoup4==4.12.2
+lxml==4.9.3
+
+# Utilities
+python-dotenv==1.0.0
+pyyaml==6.0.1
+aiofiles==23.2.1
+python-multipart==0.0.6
+
+# Monitoring & Logging
+structlog==23.2.0
