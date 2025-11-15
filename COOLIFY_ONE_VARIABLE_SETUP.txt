@@ -1,0 +1,89 @@
+╔═════════════════════════════════════════════════════════════════╗
+║              COOLIFY - ONE VARIABLE SETUP                        ║
+╚═════════════════════════════════════════════════════════════════╝
+
+Your server: ✅ 32GB RAM, 1.9TB disk, /data already exists
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: Add to Coolify (2 minutes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. New Resource → Public Repository
+2. URL: https://github.com/YOUR-USERNAME/ai-scraper
+3. Branch: main (or mvp for testing)
+4. Build Pack: Docker Compose
+5. Compose File: docker-compose.yml
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: Set Environment (30 seconds)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In Coolify Environment tab, add ONLY:
+
+MONGO_PASSWORD=<paste secure password here>
+
+Generate password:
+  openssl rand -base64 32
+
+Optional (only if using HF private models):
+  HF_TOKEN=your_token
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3: Deploy (10 minutes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Click Deploy button.
+
+Wait for:
+  ✅ Building images (5 min)
+  ✅ Starting services (1 min)  
+  ✅ Downloading models (5-10 min)
+  ✅ Health checks (1 min)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THAT'S IT! Everything else is automatic:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Coolify provides:
+   - Your domains (SERVICE_FQDN_*)
+   - SSL certificates
+   - Reverse proxy
+   - Health monitoring
+
+✅ Docker-compose uses:
+   - Your /data structure (already perfect!)
+   - Smart defaults for all settings
+   - Internal service networking
+
+✅ Your server:
+   - Already has /data directories ✅
+   - Already has Docker ✅
+   - Has 32GB RAM (perfect!) ✅
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Access Your Services:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Check Coolify for your auto-generated URLs:
+
+Main API:  https://your-app.coolify.app/docs
+n8n:       https://n8n-your-app.coolify.app
+
+Test:
+  curl https://your-app.coolify.app/health
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Import Zie619's Workflows:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. git clone https://github.com/Zie619/n8n-workflows
+2. Access your n8n URL
+3. Import workflow JSON files
+4. Update HTTP nodes: http://agent-gateway:8000
+5. Update MongoDB: host=mongodb, password=<your-MONGO_PASSWORD>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+See COOLIFY_NATIVE_SETUP.md for detailed documentation
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

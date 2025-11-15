@@ -1,9 +1,9 @@
 ╔═══════════════════════════════════════════════════════════╗
-║   ENVIRONMENT VARIABLES - QUICK REFERENCE                 ║
+║   ENVIRONMENT VARIABLES - COOLIFY NATIVE SETUP            ║
 ╚═══════════════════════════════════════════════════════════╝
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔴 REQUIRED (YOU MUST SET THESE IN COOLIFY)
+🔴 REQUIRED (SET IN COOLIFY - ONLY ONE!)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 MONGO_PASSWORD=<run: openssl rand -base64 32>
@@ -15,14 +15,24 @@ MONGO_PASSWORD=<run: openssl rand -base64 32>
 HF_TOKEN=<from https://huggingface.co/settings/tokens>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🟢 AUTO-CONFIGURED (No action needed)
+🟢 COOLIFY AUTO-CONFIGURED (Coolify sets these)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-The following are automatically set by docker-compose:
+Coolify automatically provides:
+- SERVICE_FQDN_AGENT_GATEWAY (your main domain)
+- SERVICE_FQDN_N8N (your n8n domain)
+- COOLIFY_URL, COOLIFY_BRANCH, etc.
+- SSL certificates
+- Reverse proxy configuration
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🟢 DOCKER-COMPOSE DEFAULTS (Built-in smart defaults)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+These are set in docker-compose.yml:
 - MONGO_USERNAME=admin
 - DB_NAME=webscraper
-- DATA_PATH=/data
+- DATA_PATH=/data (uses your existing /data!)
 - GATEWAY_PORT=8000
 - N8N_PORT=5678
 - OLLAMA_PORT=11434

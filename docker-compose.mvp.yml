@@ -185,11 +185,13 @@ services:
     container_name: webscraper-n8n
     restart: unless-stopped
     environment:
-      N8N_HOST: ${N8N_HOST:-localhost}
+      # Coolify auto-configures these
+      N8N_HOST: ${SERVICE_FQDN_N8N:-${N8N_HOST:-localhost}}
       N8N_PORT: 5678
       N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
-      WEBHOOK_URL: ${WEBHOOK_URL:-http://localhost:5678}
+      WEBHOOK_URL: ${SERVICE_FQDN_N8N:-${WEBHOOK_URL:-http://localhost:5678}}
       GENERIC_TIMEZONE: ${TIMEZONE:-America/New_York}
+      N8N_EDITOR_BASE_URL: ${SERVICE_FQDN_N8N:-}
     ports:
       - "${N8N_PORT:-5678}:5678"
     volumes:
