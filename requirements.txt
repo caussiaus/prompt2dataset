@@ -3,7 +3,7 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 
 # HTTP Client
-httpx==0.25.1
+httpx==0.25.2
 
 # Data Validation
 pydantic==2.5.0
