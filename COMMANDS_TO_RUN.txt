@@ -1,0 +1,123 @@
+╔═══════════════════════════════════════════════════════════╗
+║         COMMANDS TO RUN - DEPLOYMENT READY                ║
+╚═══════════════════════════════════════════════════════════╝
+
+📋 Run these commands to prepare for Coolify deployment:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: Prepare Repository (In Cursor/Your Workspace)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+bash PREPARE_FOR_DEPLOYMENT.sh
+
+This will:
+✅ Initialize git (if needed)
+✅ Commit all files to main branch
+✅ Create mvp branch
+✅ Create 4090-optimized branch
+✅ Prepare READMEs for each branch
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: Add Your Repository URL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+git remote add origin https://github.com/YOUR-USERNAME/ai-scraper.git
+
+Replace YOUR-USERNAME with your GitHub/GitLab username
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3: Push All Branches
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+git push -u origin main
+git push -u origin mvp
+git push -u origin 4090-optimized
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4: Generate Secure Password
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+openssl rand -base64 32
+
+Copy the output - you'll need it for Coolify!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5: Deploy in Coolify
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In Coolify Dashboard:
+
+1. New Project → "ai-web-scraper"
+
+2. New Resource → Public Repository
+
+3. Configure:
+   Repository: https://github.com/YOUR-USERNAME/ai-scraper
+   Branch: mvp (for testing) OR 4090-optimized (for GPU)
+   Build Pack: Docker Compose
+   Compose File: docker-compose.mvp.yml (or .4090.yml)
+
+4. Environment:
+   MONGO_PASSWORD=<paste-your-generated-password>
+
+   If using 4090-optimized, also add:
+   CUDA_VISIBLE_DEVICES=0
+
+5. Click Deploy
+
+6. Wait 10-15 minutes for deployment
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 6: Verify Deployment
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+curl https://your-app.coolify.app/health
+
+Should return:
+{
+  "status": "ok",
+  "services": {...}
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 7: Access Services
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+API Docs:  https://your-app.coolify.app/docs
+n8n:       https://n8n-your-app.coolify.app
+
+(Check Coolify for your actual URLs)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 8: Import Zie619's Workflows
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+git clone https://github.com/Zie619/n8n-workflows
+
+Then:
+1. Open your n8n URL
+2. Import workflow JSON files
+3. Update URLs to: http://agent-gateway:8000
+4. Update MongoDB: host=mongodb, password=<MONGO_PASSWORD>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 QUICK REFERENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For MVP (Testing):
+  Branch: mvp
+  Compose: docker-compose.mvp.yml
+  Environment: MONGO_PASSWORD only
+  Time: 10 min
+
+For 4090 (Max Performance):
+  Branch: 4090-optimized
+  Compose: docker-compose.4090.yml
+  Environment: MONGO_PASSWORD + CUDA_VISIBLE_DEVICES=0
+  Time: 15 min
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NEXT: Run 'bash PREPARE_FOR_DEPLOYMENT.sh'
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
