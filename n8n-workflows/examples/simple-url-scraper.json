@@ -1,0 +1,121 @@
+{
+  "name": "Simple URL Scraper",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "url",
+              "value": "https://example.com"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set URL",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://agent-gateway:8000/scrape",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"url\": \"{{$json.url}}\",\n  \"strategy\": \"full\",\n  \"use_vision\": true\n}"
+      },
+      "name": "Call Gateway API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificOperation",
+        "operation": "findOne",
+        "collection": "jobs",
+        "options": {
+          "query": "={\n  \"_id\": \"{{$json.job_id}}\"\n}"
+        }
+      },
+      "name": "Poll Job Status",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.status}}",
+              "value2": "completed"
+            }
+          ]
+        }
+      },
+      "name": "Is Completed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "url",
+              "value": "={{$json.url}}"
+            },
+            {
+              "name": "title",
+              "value": "={{$json.results.render.metadata.title}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Format Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [1250, 200]
+    }
+  ],
+  "connections": {
+    "When clicking 'Test workflow'": {
+      "main": [[{ "node": "Set URL", "type": "main", "index": 0 }]]
+    },
+    "Set URL": {
+      "main": [[{ "node": "Call Gateway API", "type": "main", "index": 0 }]]
+    },
+    "Call Gateway API": {
+      "main": [[{ "node": "Poll Job Status", "type": "main", "index": 0 }]]
+    },
+    "Poll Job Status": {
+      "main": [[{ "node": "Is Completed?", "type": "main", "index": 0 }]]
+    },
+    "Is Completed?": {
+      "main": [[{ "node": "Format Output", "type": "main", "index": 0 }], []]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "id": "1"
+}

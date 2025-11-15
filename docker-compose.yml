@@ -1,0 +1,226 @@
+version: '3.8'
+
+services:
+  # MongoDB - Data persistence
+  mongodb:
+    image: mongo:7
+    container_name: webscraper-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-changeme}
+    volumes:
+      - ${DATA_PATH:-./data}/mongodb:/data/db
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    networks:
+      - webscraper-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Ollama - AI Models Service
+  ollama:
+    image: ollama/ollama:latest
+    container_name: webscraper-ollama
+    restart: unless-stopped
+    volumes:
+      - ${DATA_PATH:-./data}/ollama:/root/.ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    networks:
+      - webscraper-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Model Manager - Downloads AI models
+  model-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile.model-manager
+    container_name: webscraper-model-manager
+    restart: "no"
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      MODELS_CONFIG_PATH: /app/models.config
+    volumes:
+      - ./models.config:/app/models.config:ro
+    networks:
+      - webscraper-network
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+  # Agent Gateway - Main orchestrator
+  agent-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent-gateway
+    container_name: webscraper-gateway
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-changeme}@mongodb:27017
+      DB_NAME: ${DB_NAME:-webscraper}
+      DISCOVERY_URL: http://agent-discovery:8001
+      CAMOUFOX_URL: http://agent-camoufox:8002
+      VISION_URL: http://agent-vision:8003
+      EXTRACTION_URL: http://agent-extraction:8004
+    ports:
+      - "${GATEWAY_PORT:-8000}:8000"
+    volumes:
+      - ${DATA_PATH:-./data}/gateway:/data
+    networks:
+      - webscraper-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Agent Discovery - Web crawling and discovery
+  agent-discovery:
+    build:
+      context: .
+      dockerfile: Dockerfile.discovery-agent
+    container_name: webscraper-discovery
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-changeme}@mongodb:27017
+      DB_NAME: ${DB_NAME:-webscraper}
+      OLLAMA_URL: http://ollama:11434
+      MAX_CONCURRENT_REQUESTS: ${MAX_CONCURRENT_REQUESTS:-10}
+    volumes:
+      - ${DATA_PATH:-./data}/discovery:/data
+    networks:
+      - webscraper-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Agent Camoufox - Browser automation
+  agent-camoufox:
+    build:
+      context: .
+      dockerfile: Dockerfile.camoufox
+    container_name: webscraper-camoufox
+    restart: unless-stopped
+    shm_size: 2gb
+    environment:
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    volumes:
+      - ${DATA_PATH:-./data}/camoufox:/data
+    networks:
+      - webscraper-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Agent Vision - OCR and vision processing
+  agent-vision:
+    build:
+      context: .
+      dockerfile: Dockerfile.vision-agent
+    container_name: webscraper-vision
+    restart: unless-stopped
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      VISION_MODEL: ${VISION_MODEL:-llava}
+      OCR_MODEL: ${OCR_MODEL:-llava}
+    volumes:
+      - ${DATA_PATH:-./data}/vision:/data
+    networks:
+      - webscraper-network
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Agent Extraction - Data extraction and structuring
+  agent-extraction:
+    build:
+      context: .
+      dockerfile: Dockerfile.extraction-agent
+    container_name: webscraper-extraction
+    restart: unless-stopped
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      EXTRACTION_MODEL: ${EXTRACTION_MODEL:-llama3.1}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-bge-m3}
+    volumes:
+      - ${DATA_PATH:-./data}/extraction:/data
+    networks:
+      - webscraper-network
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # n8n - Workflow automation (optional)
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: webscraper-n8n
+    restart: unless-stopped
+    environment:
+      # Coolify auto-configures these via SERVICE_FQDN_N8N
+      N8N_HOST: ${SERVICE_FQDN_N8N:-${N8N_HOST:-localhost}}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      WEBHOOK_URL: ${SERVICE_FQDN_N8N:-${WEBHOOK_URL:-http://localhost:5678}}
+      GENERIC_TIMEZONE: ${TIMEZONE:-America/New_York}
+      # Auto-detect if behind Coolify proxy
+      N8N_EDITOR_BASE_URL: ${SERVICE_FQDN_N8N:-}
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    volumes:
+      - ${DATA_PATH:-./data}/n8n:/home/node/.n8n
+    networks:
+      - webscraper-network
+    depends_on:
+      - agent-gateway
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  webscraper-network:
+    driver: bridge
+
+volumes:
+  mongodb-data:
+  ollama-data:

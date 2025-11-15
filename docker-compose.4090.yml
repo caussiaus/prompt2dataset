@@ -1,0 +1,277 @@
+version: '3.8'
+
+# RTX 4090 + Arch Linux Optimized Configuration
+# Tuned for: 24GB VRAM, 32GB RAM, Fast Network, NVMe Storage
+
+services:
+  # MongoDB - NVMe optimized
+  mongodb:
+    image: mongo:7
+    container_name: webscraper-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-changeme}
+    command: >
+      mongod
+      --wiredTigerCacheSizeGB 4
+      --wiredTigerJournalCompressor zstd
+      --syncdelay 5
+    volumes:
+      - /data/mongodb:/data/db
+    networks:
+      - webscraper-network
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+        reservations:
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Ollama - GPU Accelerated (RTX 4090)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: webscraper-ollama
+    restart: unless-stopped
+    environment:
+      # GPU Configuration
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      CUDA_VISIBLE_DEVICES: 0
+      # Ollama GPU Optimization
+      OLLAMA_NUM_GPU: 1
+      OLLAMA_GPU_LAYERS: 99999
+      OLLAMA_NUM_PARALLEL: 8
+      OLLAMA_MAX_LOADED_MODELS: 4
+      OLLAMA_MAX_QUEUE: 128
+      OLLAMA_FLASH_ATTENTION: 1
+      OLLAMA_KV_CACHE_TYPE: f16
+      # Performance
+      OLLAMA_NUM_THREAD: 16
+    volumes:
+      - /data/ollama:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - webscraper-network
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+        reservations:
+          memory: 8G
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Model Manager
+  model-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile.model-manager
+    container_name: webscraper-model-manager
+    restart: "no"
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      MODELS_CONFIG_PATH: /app/models.4090.config
+    volumes:
+      - ./models.4090.config:/app/models.4090.config:ro
+    networks:
+      - webscraper-network
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+  # Agent Gateway
+  agent-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent-gateway
+    container_name: webscraper-gateway
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-changeme}@mongodb:27017
+      DB_NAME: ${DB_NAME:-webscraper}
+      DISCOVERY_URL: http://agent-discovery:8001
+      CAMOUFOX_URL: http://agent-camoufox:8002
+      VISION_URL: http://agent-vision:8003
+      EXTRACTION_URL: http://agent-extraction:8004
+      MAX_CONCURRENT_REQUESTS: ${MAX_CONCURRENT_REQUESTS:-50}
+    ports:
+      - "8000:8000"
+    volumes:
+      - /data/agent-gateway:/data
+    networks:
+      - webscraper-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Agent Discovery - High concurrency
+  agent-discovery:
+    build:
+      context: .
+      dockerfile: Dockerfile.discovery-agent
+    container_name: webscraper-discovery
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-changeme}@mongodb:27017
+      DB_NAME: ${DB_NAME:-webscraper}
+      OLLAMA_URL: http://ollama:11434
+      MAX_CONCURRENT_REQUESTS: ${MAX_CONCURRENT_REQUESTS:-50}
+    volumes:
+      - /data/discovery-agent:/data
+    networks:
+      - webscraper-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+      replicas: 2
+
+  # Agent Camoufox - Multiple instances for parallel rendering
+  agent-camoufox:
+    build:
+      context: .
+      dockerfile: Dockerfile.camoufox
+    restart: unless-stopped
+    shm_size: 2gb
+    volumes:
+      - /data/camoufox:/data
+    networks:
+      - webscraper-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2'
+      replicas: 5  # Run 5 browser instances in parallel
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Agent Vision - GPU accelerated
+  agent-vision:
+    build:
+      context: .
+      dockerfile: Dockerfile.vision-agent
+    container_name: webscraper-vision
+    restart: unless-stopped
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      VISION_MODEL: ${VISION_MODEL:-qwen3-vl}
+      OCR_MODEL: ${OCR_MODEL:-qwen3-vl}
+      VISION_BATCH_SIZE: ${VISION_BATCH_SIZE:-8}
+    volumes:
+      - /data/vision-agent:/data
+    networks:
+      - webscraper-network
+    depends_on:
+      ollama:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+      replicas: 3  # 3 vision workers
+
+  # Agent Extraction - GPU accelerated
+  agent-extraction:
+    build:
+      context: .
+      dockerfile: Dockerfile.extraction-agent
+    container_name: webscraper-extraction
+    restart: unless-stopped
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      EXTRACTION_MODEL: ${EXTRACTION_MODEL:-qwen2.5:32b}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-bge-m3}
+      EXTRACTION_BATCH_SIZE: ${EXTRACTION_BATCH_SIZE:-16}
+    volumes:
+      - /data/extraction-agent:/data
+    networks:
+      - webscraper-network
+    depends_on:
+      ollama:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+      replicas: 4  # 4 extraction workers
+
+  # n8n - Workflow automation
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: webscraper-n8n
+    restart: unless-stopped
+    environment:
+      N8N_HOST: ${SERVICE_FQDN_N8N:-${N8N_HOST:-localhost}}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      WEBHOOK_URL: ${SERVICE_FQDN_N8N:-${WEBHOOK_URL:-http://localhost:5678}}
+      GENERIC_TIMEZONE: ${TIMEZONE:-America/New_York}
+      N8N_EDITOR_BASE_URL: ${SERVICE_FQDN_N8N:-}
+      EXECUTIONS_MODE: queue
+      QUEUE_BULL_REDIS_HOST: redis
+    ports:
+      - "5678:5678"
+    volumes:
+      - /data/n8n:/home/node/.n8n
+    networks:
+      - webscraper-network
+    depends_on:
+      - agent-gateway
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  # Redis - For n8n queue (handle high throughput)
+  redis:
+    image: redis:7-alpine
+    container_name: webscraper-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 2gb --maxmemory-policy allkeys-lru
+    volumes:
+      - /data/redis:/data
+    networks:
+      - webscraper-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+networks:
+  webscraper-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1500  # Standard MTU for enp5s0f1

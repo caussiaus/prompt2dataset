@@ -1,0 +1,91 @@
+╔═══════════════════════════════════════════════════════════╗
+║   ENVIRONMENT VARIABLES - COOLIFY NATIVE SETUP            ║
+╚═══════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔴 REQUIRED (SET IN COOLIFY - ONLY ONE!)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MONGO_PASSWORD=<run: openssl rand -base64 32>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🟡 OPTIONAL (Only if using external AI services)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HF_TOKEN=<from https://huggingface.co/settings/tokens>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🟢 COOLIFY AUTO-CONFIGURED (Coolify sets these)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Coolify automatically provides:
+- SERVICE_FQDN_AGENT_GATEWAY (your main domain)
+- SERVICE_FQDN_N8N (your n8n domain)
+- COOLIFY_URL, COOLIFY_BRANCH, etc.
+- SSL certificates
+- Reverse proxy configuration
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🟢 DOCKER-COMPOSE DEFAULTS (Built-in smart defaults)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+These are set in docker-compose.yml:
+- MONGO_USERNAME=admin
+- DB_NAME=webscraper
+- DATA_PATH=/data (uses your existing /data!)
+- GATEWAY_PORT=8000
+- N8N_PORT=5678
+- OLLAMA_PORT=11434
+- All *_URL variables (internal Docker network)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 FOR YOUR SERVER SPECIFICALLY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Your server: 32GB RAM, 1.9TB disk, /data already created ✅
+
+Optimized settings for your hardware:
+- MAX_CONCURRENT_REQUESTS=20 (can handle 20 parallel scrapes)
+- OLLAMA_NUM_PARALLEL=4 (4 AI requests at once)
+- OLLAMA_MAX_LOADED_MODELS=3 (keep 3 models in RAM)
+
+These are already set as defaults - no changes needed!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 COOLIFY QUICK SETUP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In Coolify's Environment tab, add ONLY:
+
+MONGO_PASSWORD=<your-secure-password>
+
+That's it! Everything else is automatic.
+
+Optional:
+HF_TOKEN=<token>  # Only if using Hugging Face private models
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ VERIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After deployment, verify:
+
+curl https://your-app.coolify.app/health
+
+Should return:
+{
+  "status": "ok",
+  "services": {
+    "discovery": "ok",
+    "camoufox": "ok",
+    "vision": "ok",
+    "extraction": "ok"
+  }
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+See ENV_SETUP_GUIDE.md for detailed documentation
+See COOLIFY_QUICKSTART.md for step-by-step deployment
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

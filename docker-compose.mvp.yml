@@ -1,0 +1,215 @@
+version: '3.8'
+
+# MVP Configuration - Minimal, fast deployment for Coolify
+# Optimized for 8GB RAM, 20GB disk
+
+services:
+  # MongoDB - Lightweight config
+  mongodb:
+    image: mongo:7
+    container_name: webscraper-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-changeme}
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - webscraper-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Ollama - AI Models (minimal set)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: webscraper-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - webscraper-network
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Model Manager - Downloads minimal models
+  model-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile.model-manager
+    container_name: webscraper-model-manager
+    restart: "no"
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      MODELS_CONFIG_PATH: /app/models.mvp.config
+    volumes:
+      - ./models.mvp.config:/app/models.mvp.config:ro
+    networks:
+      - webscraper-network
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+  # Agent Gateway
+  agent-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent-gateway
+    container_name: webscraper-gateway
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-changeme}@mongodb:27017
+      DB_NAME: ${DB_NAME:-webscraper}
+      DISCOVERY_URL: http://agent-discovery:8001
+      CAMOUFOX_URL: http://agent-camoufox:8002
+      VISION_URL: http://agent-vision:8003
+      EXTRACTION_URL: http://agent-extraction:8004
+    ports:
+      - "${GATEWAY_PORT:-8000}:8000"
+    networks:
+      - webscraper-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Agent Discovery
+  agent-discovery:
+    build:
+      context: .
+      dockerfile: Dockerfile.discovery-agent
+    container_name: webscraper-discovery
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-changeme}@mongodb:27017
+      DB_NAME: ${DB_NAME:-webscraper}
+      OLLAMA_URL: http://ollama:11434
+      MAX_CONCURRENT_REQUESTS: 5
+    networks:
+      - webscraper-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # Agent Camoufox - Single instance for MVP
+  agent-camoufox:
+    build:
+      context: .
+      dockerfile: Dockerfile.camoufox
+    container_name: webscraper-camoufox
+    restart: unless-stopped
+    shm_size: 1gb
+    networks:
+      - webscraper-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  # Agent Vision
+  agent-vision:
+    build:
+      context: .
+      dockerfile: Dockerfile.vision-agent
+    container_name: webscraper-vision
+    restart: unless-stopped
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      VISION_MODEL: llava
+    networks:
+      - webscraper-network
+    depends_on:
+      ollama:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # Agent Extraction
+  agent-extraction:
+    build:
+      context: .
+      dockerfile: Dockerfile.extraction-agent
+    container_name: webscraper-extraction
+    restart: unless-stopped
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      EXTRACTION_MODEL: llama3.1
+      EMBEDDING_MODEL: bge-m3
+    networks:
+      - webscraper-network
+    depends_on:
+      ollama:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # n8n - Workflow automation
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: webscraper-n8n
+    restart: unless-stopped
+    environment:
+      # Coolify auto-configures these
+      N8N_HOST: ${SERVICE_FQDN_N8N:-${N8N_HOST:-localhost}}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      WEBHOOK_URL: ${SERVICE_FQDN_N8N:-${WEBHOOK_URL:-http://localhost:5678}}
+      GENERIC_TIMEZONE: ${TIMEZONE:-America/New_York}
+      N8N_EDITOR_BASE_URL: ${SERVICE_FQDN_N8N:-}
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    volumes:
+      - n8n-data:/home/node/.n8n
+    networks:
+      - webscraper-network
+    depends_on:
+      - agent-gateway
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+networks:
+  webscraper-network:
+    driver: bridge
+
+volumes:
+  mongodb-data:
+  ollama-data:
+  n8n-data:
