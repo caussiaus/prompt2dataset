@@ -274,4 +274,4 @@ networks:
   webscraper-network:
     driver: bridge
     driver_opts:
-      com.docker.network.driver.mtu: 9000  # Jumbo frames for fast network
+      com.docker.network.driver.mtu: 1500  # Standard MTU for enp5s0f1

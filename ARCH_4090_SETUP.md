@@ -127,6 +127,8 @@ Should show your 4090!
 
 ### 3. Optimize Kernel Parameters (Optional)
 
+Your network interface: `enp5s0f1` with MTU 1500
+
 ```bash
 # Edit sysctl for network performance
 sudo nano /etc/sysctl.d/99-network-performance.conf
@@ -134,19 +136,25 @@ sudo nano /etc/sysctl.d/99-network-performance.conf
 
 Add:
 ```
-# Network optimization for fast scraping
+# Network optimization for fast scraping (MTU 1500)
 net.core.rmem_max = 134217728
 net.core.wmem_max = 134217728
 net.ipv4.tcp_rmem = 4096 87380 67108864
 net.ipv4.tcp_wmem = 4096 65536 67108864
 net.core.netdev_max_backlog = 5000
 net.ipv4.tcp_congestion_control = bbr
-net.ipv4.tcp_mtu_probing = 1
+# Note: MTU probing disabled for standard 1500 MTU
 ```
 
 Apply:
 ```bash
 sudo sysctl -p /etc/sysctl.d/99-network-performance.conf
+```
+
+Verify your network interface:
+```bash
+ip link show enp5s0f1
+# Should show: mtu 1500
 ```
 
 ---
