@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+httpx
+pydantic
+playwright
+camoufox[geoip]
+transformers
+ollama
+numpy
+pillow
+PyYAML
+pymongo
+psycopg2-binary
+redis
+aiofiles
+matplotlib
+tqdm
