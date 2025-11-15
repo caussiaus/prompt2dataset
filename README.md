@@ -6,6 +6,27 @@ Deploy once on Coolify, customize forever with n8n workflows.
 
 ---
 
+## ⚡ Quick Start (5 Minutes)
+
+```bash
+# Clone and setup
+git clone <your-repo> ai-scraper && cd ai-scraper
+bash setup.sh
+
+# Select: 1) Quick Start
+# Wait 5-10 minutes for models to download
+
+# Access your services
+open http://localhost:8000/docs
+open http://localhost:5678
+```
+
+**That's it!** Full documentation below.
+
+[📖 See QUICKSTART.md for detailed quick start guide](QUICKSTART.md)
+
+---
+
 ## 🎯 What is This?
 
 This is a **complete web scraping infrastructure** that you deploy once and then customize through n8n workflows. The platform handles:
