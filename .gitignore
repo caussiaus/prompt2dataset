@@ -1,11 +1,11 @@
-# Environment
+# Environment files
 .env
-credentials.txt
-
-# Data
-data/
-logs/
-backups/
+.env.*
+!.env.example
+*.env
+config/.env
+config/.env.*
+!config/.env.example
 
 # Python
 __pycache__/
@@ -25,14 +25,21 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
+*.log
 
-# Docker
-.docker/
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
 
-# IDE
+# IDEs
 .vscode/
 .idea/
 *.swp
@@ -40,21 +47,47 @@ wheels/
 *~
 .DS_Store
 
+# Docker
+*.dockerignore
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+postgres_data/
+ollama_data/
+
 # Logs
+logs/
 *.log
 
 # Temporary files
+tmp/
+temp/
 *.tmp
-*.bak
-*.backup
 
-# OS
-Thumbs.db
+# Secrets and credentials
+secrets/
+credentials/
+*.pem
+*.key
+*.crt
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Node (for n8n)
+# Node modules (if any frontend)
 node_modules/
+package-lock.json
+yarn.lock
+
+# Build artifacts
+*.tar.gz
+*.zip
+
+# OS specific
+Thumbs.db
+.DS_Store
+
+# Service specific
+ollama_data/
+postgres_data/
+n8n_data/
+camoufox/profiles/

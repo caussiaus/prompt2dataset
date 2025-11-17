@@ -1,0 +1,149 @@
+{
+  "project": "MVP",
+  "version": "1.0.0",
+  "description": "prompt2dataset - Multi-service orchestration",
+  "environment": "production",
+  "coolify_project_id": "prompt2dataset",
+  "services": {
+    "postgres": {
+      "id": "postgres-pgvector",
+      "name": "PostgreSQL + pgvector",
+      "type": "database",
+      "image": "pgvector/pgvector:pg16",
+      "port": 5432,
+      "status": "running",
+      "coolify_managed": true,
+      "health_check": "localhost:5432",
+      "env_vars": {
+        "POSTGRES_USER": "postgres",
+        "POSTGRES_PASSWORD": "${DB_PASSWORD}",
+        "POSTGRES_DB": "app_db"
+      }
+    },
+    "ollama": {
+      "id": "ollama-llm",
+      "name": "Ollama (Local LLM)",
+      "type": "llm",
+      "image": "ollama/ollama:latest",
+      "port": 11434,
+      "status": "pending",
+      "coolify_managed": true,
+      "health_check": "http://localhost:11434/api/tags",
+      "env_vars": {
+        "OLLAMA_HOST": "0.0.0.0:11434"
+      },
+      "models": ["mistral:latest", "neural-chat:latest", "qwen:14b"]
+    },
+    "camoufox": {
+      "id": "camoufox-scraper",
+      "name": "Camoufox Browser",
+      "type": "scraper",
+      "image": "camoufox/camoufox:latest",
+      "port": 3000,
+      "status": "pending",
+      "coolify_managed": true,
+      "health_check": "http://localhost:3000/health",
+      "env_vars": {
+        "HEADLESS": "true"
+      }
+    },
+    "html-parser": {
+      "id": "html-parser",
+      "name": "HTML Parser Service",
+      "type": "utility",
+      "image": "html-parser:latest",
+      "port": 5000,
+      "status": "pending",
+      "coolify_managed": true,
+      "health_check": "http://localhost:5000/health",
+      "build_from_repo": "services/html-parser"
+    },
+    "extraction-agent": {
+      "id": "extraction-agent",
+      "name": "Extraction Agent",
+      "type": "agent",
+      "image": "extraction-agent:latest",
+      "port": 8001,
+      "status": "pending",
+      "coolify_managed": true,
+      "health_check": "http://localhost:8001/health",
+      "build_from_repo": "services/extraction-agent"
+    },
+    "vision-agent": {
+      "id": "vision-agent",
+      "name": "Vision Agent",
+      "type": "agent",
+      "image": "vision-agent:latest",
+      "port": 8002,
+      "status": "pending",
+      "coolify_managed": true,
+      "health_check": "http://localhost:8002/health",
+      "build_from_repo": "services/vision-agent"
+    },
+    "orchestrator-agent": {
+      "id": "orchestrator-agent",
+      "name": "Orchestrator Agent",
+      "type": "agent",
+      "image": "orchestrator-agent:latest",
+      "port": 8003,
+      "status": "pending",
+      "coolify_managed": true,
+      "health_check": "http://localhost:8003/health",
+      "build_from_repo": "services/orchestrator-agent"
+    },
+    "discovery-agent": {
+      "id": "discovery-agent",
+      "name": "Discovery Agent",
+      "type": "agent",
+      "image": "discovery-agent:latest",
+      "port": 8004,
+      "status": "pending",
+      "coolify_managed": true,
+      "health_check": "http://localhost:8004/health",
+      "build_from_repo": "services/discovery-agent"
+    },
+    "searxng": {
+      "id": "searxng",
+      "name": "SearxNG",
+      "type": "search",
+      "image": "searxng/searxng:latest",
+      "port": 8888,
+      "status": "running",
+      "coolify_managed": true,
+      "health_check": "http://localhost:8888/"
+    },
+    "n8n": {
+      "id": "n8n",
+      "name": "n8n Workflows",
+      "type": "orchestration",
+      "image": "n8nio/n8n:latest",
+      "port": 5678,
+      "status": "running",
+      "coolify_managed": true,
+      "health_check": "http://localhost:5678/rest/health"
+    },
+    "agent-gateway": {
+      "id": "agent-gateway",
+      "name": "Agent Gateway",
+      "type": "gateway",
+      "image": "agent-gateway:latest",
+      "port": 8000,
+      "status": "running",
+      "coolify_managed": true,
+      "health_check": "http://localhost:8000/health"
+    }
+  },
+  "deployment_order": [
+    "postgres",
+    "ollama",
+    "searxng",
+    "camoufox",
+    "html-parser",
+    "n8n",
+    "agent-gateway",
+    "extraction-agent",
+    "vision-agent",
+    "orchestrator-agent",
+    "discovery-agent"
+  ]
+}
