@@ -1,11 +1,10 @@
-# Environment
+# Environment variables
 .env
-credentials.txt
-
-# Data
-data/
-logs/
-backups/
+.env.*
+!.env.example
+config/.env
+config/.env.*
+!config/.env.example
 
 # Python
 __pycache__/
@@ -25,14 +24,20 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
-# Docker
-.docker/
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
 
-# IDE
+# IDEs
 .vscode/
 .idea/
 *.swp
@@ -40,21 +45,69 @@ wheels/
 *~
 .DS_Store
 
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Data directories
+data/
+*.db
+*.sqlite
+*.sqlite3
+
 # Logs
 *.log
+logs/
+*.log.*
+
+# Secrets
+secrets/
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
 
 # Temporary files
+tmp/
+temp/
 *.tmp
 *.bak
-*.backup
+*.cache
 
 # OS
 Thumbs.db
+.DS_Store
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Node (for n8n)
+# Node.js (if using n8n custom nodes)
 node_modules/
+package-lock.json
+yarn.lock
+
+# Ollama models (too large for git)
+*.gguf
+models/
+
+# Test coverage
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Local development
+.local/
+local_test.py
+scratch.py

@@ -1,0 +1,241 @@
+version: '3.8'
+
+# Local testing docker-compose
+# Usage: docker-compose -f docker-compose.local.yml up
+
+services:
+  # Database Layer
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: prompt2dataset-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: localdev123
+      POSTGRES_DB: app_db
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+    networks:
+      - local-network
+
+  # LLM Services
+  ollama:
+    image: ollama/ollama:latest
+    container_name: prompt2dataset-ollama
+    ports:
+      - "11434:11434"
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ollama_data_local:/root/.ollama
+    networks:
+      - local-network
+
+  # Scraping/Parsing
+  camoufox:
+    image: camoufox/camoufox:latest
+    container_name: prompt2dataset-camoufox
+    ports:
+      - "3000:3000"
+    environment:
+      HEADLESS: "true"
+    networks:
+      - local-network
+
+  html-parser:
+    build:
+      context: ./services/html-parser
+      dockerfile: Dockerfile
+    container_name: prompt2dataset-html-parser
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_ENV: development
+      PORT: 5000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: app_db
+      DB_USER: postgres
+      DB_PASSWORD: localdev123
+    depends_on:
+      - postgres
+    networks:
+      - local-network
+
+  # Search
+  searxng:
+    image: searxng/searxng:latest
+    container_name: prompt2dataset-searxng
+    ports:
+      - "8888:8888"
+    environment:
+      BASE_URL: http://localhost:8888
+    networks:
+      - local-network
+
+  # Orchestration
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: prompt2dataset-n8n
+    ports:
+      - "5678:5678"
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: postgres
+      DB_POSTGRESDB_PASSWORD: localdev123
+      N8N_SECURE_COOKIE: "false"
+      N8N_HOST: localhost
+      WEBHOOK_URL: http://localhost:5678
+    depends_on:
+      - postgres
+    volumes:
+      - n8n_data_local:/home/node/.n8n
+    networks:
+      - local-network
+
+  # Agents
+  extraction-agent:
+    build:
+      context: ./services/extraction-agent
+      dockerfile: Dockerfile
+    container_name: prompt2dataset-extraction-agent
+    ports:
+      - "8001:8001"
+    environment:
+      PORT: 8001
+      LOG_LEVEL: debug
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: app_db
+      DB_USER: postgres
+      DB_PASSWORD: localdev123
+      HTML_PARSER_URL: http://html-parser:5000
+      OLLAMA_URL: http://ollama:11434
+    depends_on:
+      - postgres
+      - html-parser
+      - ollama
+    networks:
+      - local-network
+
+  vision-agent:
+    build:
+      context: ./services/vision-agent
+      dockerfile: Dockerfile
+    container_name: prompt2dataset-vision-agent
+    ports:
+      - "8002:8002"
+    environment:
+      PORT: 8002
+      LOG_LEVEL: debug
+      OLLAMA_URL: http://ollama:11434
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: app_db
+      DB_USER: postgres
+      DB_PASSWORD: localdev123
+    depends_on:
+      - ollama
+      - postgres
+    networks:
+      - local-network
+
+  orchestrator-agent:
+    build:
+      context: ./services/orchestrator-agent
+      dockerfile: Dockerfile
+    container_name: prompt2dataset-orchestrator-agent
+    ports:
+      - "8003:8003"
+    environment:
+      PORT: 8003
+      LOG_LEVEL: debug
+      EXTRACTION_AGENT_URL: http://extraction-agent:8001
+      VISION_AGENT_URL: http://vision-agent:8002
+      DISCOVERY_AGENT_URL: http://discovery-agent:8004
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: app_db
+      DB_USER: postgres
+      DB_PASSWORD: localdev123
+    depends_on:
+      - extraction-agent
+      - vision-agent
+      - postgres
+    networks:
+      - local-network
+
+  discovery-agent:
+    build:
+      context: ./services/discovery-agent
+      dockerfile: Dockerfile
+    container_name: prompt2dataset-discovery-agent
+    ports:
+      - "8004:8004"
+    environment:
+      PORT: 8004
+      LOG_LEVEL: debug
+      SERVICES_CONFIG: /app/services.json
+      SEARXNG_URL: http://searxng:8888
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: app_db
+      DB_USER: postgres
+      DB_PASSWORD: localdev123
+    volumes:
+      - ./services.json:/app/services.json:ro
+    depends_on:
+      - postgres
+      - searxng
+    networks:
+      - local-network
+
+  # Gateway
+  agent-gateway:
+    build:
+      context: ./agent-gateway
+      dockerfile: Dockerfile
+    container_name: prompt2dataset-agent-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      LOG_LEVEL: debug
+      SERVICES_CONFIG: /app/services.json
+      EXTRACTION_AGENT_URL: http://extraction-agent:8001
+      VISION_AGENT_URL: http://vision-agent:8002
+      ORCHESTRATOR_AGENT_URL: http://orchestrator-agent:8003
+      DISCOVERY_AGENT_URL: http://discovery-agent:8004
+    volumes:
+      - ./services.json:/app/services.json:ro
+    depends_on:
+      - extraction-agent
+      - vision-agent
+      - orchestrator-agent
+      - discovery-agent
+    networks:
+      - local-network
+
+volumes:
+  postgres_data_local:
+  ollama_data_local:
+  n8n_data_local:
+
+networks:
+  local-network:
+    name: prompt2dataset-local
+    driver: bridge

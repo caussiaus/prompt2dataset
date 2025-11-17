@@ -1,438 +1,335 @@
-# AI-Augmented Web Scraper Platform
+# prompt2dataset
 
-**A production-ready, self-hosted web scraping platform with AI-powered extraction, vision processing, and workflow automation.**
+Production-ready self-hosted service orchestration for web data extraction and processing. Built for deployment on Coolify.
 
-Deploy once on Coolify, customize forever with n8n workflows.
+## Overview
 
----
+prompt2dataset is a modular, microservices-based system that orchestrates web scraping, data extraction, vision analysis, and workflow automation. All services are containerized and managed through a single repository with centralized configuration.
 
-## ⚡ Quick Start (5 Minutes)
+### Key Features
 
-```bash
-# Clone and setup
-git clone <your-repo> ai-scraper && cd ai-scraper
-bash setup.sh
+- **Multi-Agent Architecture**: Specialized agents for extraction, vision, discovery, and orchestration
+- **LLM-Powered Extraction**: Uses Ollama for intelligent data extraction
+- **Vision Analysis**: Image analysis using vision models
+- **Search Integration**: SearXNG for privacy-focused web search
+- **Workflow Automation**: n8n for complex workflow orchestration
+- **PostgreSQL + pgvector**: Vector database for semantic search
+- **Single-Repo Management**: All services in one place with centralized config
+- **Coolify-Ready**: Deploy entire stack with one manifest
 
-# Select: 1) Quick Start
-# Wait 5-10 minutes for models to download
-
-# Access your services
-open http://localhost:8000/docs
-open http://localhost:5678
-```
-
-**That's it!** Full documentation below.
-
-[📖 See QUICKSTART.md for detailed quick start guide](QUICKSTART.md)
-
----
-
-## 🎯 What is This?
-
-This is a **complete web scraping infrastructure** that you deploy once and then customize through n8n workflows. The platform handles:
-
-- 🤖 **AI Model Management** - Automatic download and management of SOTA AI models
-- 🌐 **Browser Automation** - Anti-detection browser rendering with Camoufox
-- 👁️ **Vision Processing** - OCR, image analysis, and screenshot understanding
-- 🔍 **Discovery** - Intelligent web crawling and URL discovery
-- 📊 **Data Extraction** - AI-powered structured data extraction
-- 🔄 **Workflow Automation** - n8n for custom scraping workflows
-
-**The Magic**: You don't write code for scraping projects. You create n8n workflows that orchestrate the agents.
-
----
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────┐
-│                    n8n Workflows                     │
-│          (Your Custom Scraping Logic Here)          │
-└────────────────────┬────────────────────────────────┘
-                     │
-         ┌───────────┴───────────┐
-         │   Agent Gateway       │
-         │   (Orchestrator)      │
-         └───────────┬───────────┘
-                     │
-    ┏━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━┓
-    ┃                              ┃
-┌───▼────┐  ┌──────▼─┐  ┌────▼────┐  ┌────▼────┐
-│Discovery│  │Camoufox│  │ Vision  │  │Extraction│
-│ Agent  │  │ Agent  │  │  Agent  │  │  Agent  │
-└────────┘  └────────┘  └─────────┘  └─────────┘
-                          │
-                    ┌─────▼──────┐
-                    │   Ollama   │
-                    │ (AI Models)│
-                    └────────────┘
-```
-
----
-
-## 🚀 Quick Start (Coolify Deployment)
+## Quick Start
 
 ### Prerequisites
-- [Coolify](https://coolify.io/) installed on your server
+
 - Docker & Docker Compose
-- (Optional) NVIDIA GPU for faster AI processing
+- Python 3.11+
+- 50GB+ disk space (for LLM models)
+- 8GB+ RAM recommended
 
-### Step 1: Clone & Configure
+### Local Development
 
+1. **Clone and setup:**
 ```bash
-# Clone this repository in Coolify's project directory
-git clone <your-repo-url> ai-web-scraper
-cd ai-web-scraper
-
-# Create environment file
-cp .env.example .env
-nano .env  # Edit with your settings
+git clone https://github.com/yourusername/prompt2dataset.git
+cd prompt2dataset
+bash scripts/setup.sh
 ```
 
-**Important**: Change `MONGO_PASSWORD` to a secure password!
-
-### Step 2: Select AI Models
-
-Edit `models.config` to select which AI models to download:
-
+2. **Start services:**
 ```bash
-nano models.config
+docker-compose -f docker-compose.local.yml up -d
 ```
 
-Remove/comment out models you don't need. Smaller setups can use:
-- `llama3.1` (general LLM, ~4GB)
-- `llava` (vision, ~4GB)
-- `bge-m3` (embeddings, ~2GB)
+3. **Check health:**
+```bash
+python3 scripts/service_tracker.py
+# Or: bash scripts/health-check.sh
+```
 
-Full setup with all models requires ~50GB+ disk space.
+4. **Test the system:**
+```bash
+python3 scripts/service_client.py --test
+```
 
-### Step 3: Deploy on Coolify
+### Production Deployment (Coolify)
 
-1. **In Coolify UI**:
-   - Create new project: "AI Web Scraper"
-   - Add resource → Docker Compose
-   - Point to this repository
-   - Set compose file: `docker-compose.yml`
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for detailed deployment instructions.
 
-2. **Environment Variables** (Set in Coolify):
-   ```
-   MONGO_PASSWORD=your_secure_password
-   DATA_PATH=/data
-   ```
+Quick summary:
+1. Push repo to GitHub
+2. Connect repo to Coolify
+3. Import `coolify-manifest.yaml`
+4. Deploy services in order
+5. Monitor with service tracker
 
-3. **Deploy**:
-   - Click "Deploy"
-   - First deployment will download AI models (takes 10-30 minutes)
-   - Monitor logs to see model download progress
+## Architecture
 
-### Step 4: Access Services
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Agent Gateway (8000)                    │
+│                   (Central API Gateway)                      │
+└─────────────────────────────────────────────────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+┌───────▼────────┐   ┌───────▼────────┐   ┌───────▼────────┐
+│  Extraction    │   │  Vision        │   │  Discovery     │
+│  Agent (8001)  │   │  Agent (8002)  │   │  Agent (8004)  │
+└───────┬────────┘   └───────┬────────┘   └───────┬────────┘
+        │                     │                     │
+        └─────────────────────┼─────────────────────┘
+                              │
+                    ┌─────────▼──────────┐
+                    │  Orchestrator      │
+                    │  Agent (8003)      │
+                    └─────────┬──────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+┌───────▼────────┐   ┌───────▼────────┐   ┌───────▼────────┐
+│  PostgreSQL    │   │  Ollama        │   │  SearXNG       │
+│  + pgvector    │   │  (LLM)         │   │  (Search)      │
+└────────────────┘   └────────────────┘   └────────────────┘
+```
 
-After deployment, access:
-
-- **API Gateway**: `http://your-domain:8000`
-- **API Docs**: `http://your-domain:8000/docs`
-- **n8n Workflow Builder**: `http://your-domain:5678`
-- **MongoDB**: `mongodb://your-domain:27017`
-
----
-
-## 📦 What Gets Deployed
+## Services
 
 | Service | Port | Description |
 |---------|------|-------------|
-| **agent-gateway** | 8000 | Main API orchestrator |
-| **agent-discovery** | 8001 | Web crawling & URL discovery |
-| **agent-camoufox** | 8002 | Anti-detection browser |
-| **agent-vision** | 8003 | OCR & image analysis |
-| **agent-extraction** | 8004 | AI data extraction |
-| **ollama** | 11434 | AI model server |
-| **mongodb** | 27017 | Data persistence |
+| **Agent Gateway** | 8000 | Central API gateway |
+| **Extraction Agent** | 8001 | Data extraction from web pages |
+| **Vision Agent** | 8002 | Image analysis |
+| **Orchestrator Agent** | 8003 | Workflow coordination |
+| **Discovery Agent** | 8004 | URL discovery & service monitoring |
+| **HTML Parser** | 5000 | HTML parsing utility |
+| **PostgreSQL** | 5432 | Database with pgvector |
+| **Ollama** | 11434 | Local LLM server |
+| **Camoufox** | 3000 | Browser automation |
+| **SearXNG** | 8888 | Privacy-focused search |
 | **n8n** | 5678 | Workflow automation |
 
----
+See **[SERVICES.md](docs/SERVICES.md)** for detailed service descriptions.
 
-## 🎨 Creating Scraping Workflows
+## API Endpoints
 
-### Method 1: Use the API Directly
+### Discovery Agent
+- `POST /discover` - Discover URLs using search
+- `GET /services` - List all services health status
+- `POST /batch-discover` - Batch URL discovery
 
-```bash
-# Start a scraping job
-curl -X POST http://your-domain:8000/scrape \
-  -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://example.com",
-    "strategy": "full",
-    "use_vision": true
-  }'
+### Extraction Agent
+- `POST /extract` - Extract structured data from URL/HTML
+- `POST /batch-extract` - Batch extraction
 
-# Check job status
-curl http://your-domain:8000/jobs/{job_id}
-```
+### Vision Agent
+- `POST /analyze-image` - Analyze image content
+- `POST /batch-analyze` - Batch image analysis
 
-### Method 2: Create n8n Workflows (Recommended)
+### Orchestrator Agent
+- `POST /orchestrate` - Execute multi-step workflows
+- `GET /workflows` - List stored workflows
 
-1. **Access n8n**: `http://your-domain:5678`
-2. **Import workflow** from `n8n-workflows/examples/`
-3. **Customize** the workflow for your needs
-4. **Activate** and run
+See **[API_ENDPOINTS.md](docs/API_ENDPOINTS.md)** for complete API documentation.
 
-See `n8n-workflows/README.md` for example workflows.
-
----
-
-## 📚 Example Use Cases
-
-### 1. Product Price Monitoring
-```
-n8n Trigger (Schedule) 
-  → Call Gateway API (product URLs)
-  → Extract structured data (price, stock, etc.)
-  → Store in MongoDB
-  → Send alerts on price changes
-```
-
-### 2. News Article Scraping
-```
-n8n Trigger (Webhook)
-  → Discovery Agent (find all articles)
-  → Vision Agent (screenshot articles)
-  → Extraction Agent (title, author, content)
-  → Export to JSON/CSV
-```
-
-### 3. Real Estate Data Collection
-```
-n8n Schedule
-  → Discovery (find property listings)
-  → Camoufox (render JS-heavy pages)
-  → Vision (extract from images)
-  → Extraction (structured property data)
-  → Database storage
-```
-
----
-
-## 🎛️ Configuration
-
-### AI Models (models.config)
-
-Choose models based on your hardware:
-
-**Minimum Setup** (12GB RAM, no GPU):
-```
-llama3.1
-llava
-bge-m3
-```
-
-**Recommended Setup** (32GB RAM, GPU):
-```
-llama3.1
-llava
-qwen3-vl
-deepseek-r1
-codellama
-bge-m3
-```
-
-**Full Setup** (64GB+ RAM, GPU):
-All models from `models.config`
+## Configuration
 
 ### Environment Variables
 
-Key variables to configure in `.env`:
+Copy `config/.env.example` to `.env` and update:
 
 ```bash
-# Database
-MONGO_PASSWORD=change_this_password
+# Critical settings
+DB_PASSWORD=your_secure_password
+DOMAIN=yourdomain.com
 
-# AI Models
-VISION_MODEL=llava
-EXTRACTION_MODEL=llama3.1
-EMBEDDING_MODEL=bge-m3
-
-# Discovery
-MAX_CONCURRENT_REQUESTS=10
-
-# Storage
-DATA_PATH=./data
+# Service URLs (auto-configured for Docker network)
+OLLAMA_URL=http://ollama:11434
+SEARXNG_URL=http://searxng:8888
 ```
 
----
+### Service Registry
 
-## 🔧 Customization Guide
+`services.json` is the source of truth for all services. It defines:
+- Service metadata
+- Health check endpoints
+- Environment variables
+- Deployment order
 
-### Change AI Models
+## Usage Examples
 
-1. Edit `models.config`
-2. Redeploy model-manager service
-3. Update env vars (VISION_MODEL, EXTRACTION_MODEL, etc.)
-4. Restart affected agents
+### Python SDK
 
-### Add Custom Agents
-
-1. Create new agent file: `agent_custom.py`
-2. Add Dockerfile: `Dockerfile.custom-agent`
-3. Add to `docker-compose.yml`
-4. Rebuild and deploy
-
-### Modify Extraction Logic
-
-Edit prompts in `agent_extraction.py`:
 ```python
-prompts = {
-    "product": "Extract product info including...",
-    "article": "Extract article info including...",
-    # Add your custom types
-}
+from scripts.service_client import ServiceClient
+
+client = ServiceClient('http://localhost:8000')
+
+# Discover URLs
+results = client.discover_urls(
+    query="python web scraping",
+    max_results=10
+)
+
+# Extract data
+data = client.extract_data(
+    url="https://example.com",
+    schema={
+        "title": "string",
+        "price": "number",
+        "description": "string"
+    }
+)
+
+# Analyze image
+analysis = client.analyze_image(
+    image_url="https://example.com/image.jpg",
+    prompt="Describe this product image"
+)
+
+# Execute workflow
+workflow = client.orchestrate_workflow(
+    workflow_name="Extract Product Data",
+    steps=[
+        {
+            "name": "discover",
+            "type": "discover",
+            "data": {"query": "laptops", "max_results": 5}
+        },
+        {
+            "name": "extract",
+            "type": "extract",
+            "data": {"schema": {"title": "string", "price": "number"}},
+            "depends_on": "discover"
+        }
+    ]
+)
 ```
 
----
-
-## 🐛 Troubleshooting
-
-### Models Not Downloading
+### cURL Examples
 
 ```bash
-# Check Ollama logs
-docker logs webscraper-ollama
+# Health check
+curl http://localhost:8000/health
 
-# Manually trigger model download
-docker exec webscraper-model-manager python model_manager.py
+# Discover URLs
+curl -X POST http://localhost:8004/discover \
+  -H "Content-Type: application/json" \
+  -d '{"query": "python tutorials", "max_results": 5}'
+
+# Extract data
+curl -X POST http://localhost:8001/extract \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com",
+    "schema": {
+      "title": "string",
+      "price": "number"
+    }
+  }'
 ```
 
-### Agent Connection Errors
+## Monitoring
+
+### Service Tracker
+
+Monitor all services in real-time:
 
 ```bash
-# Check all services are healthy
-docker ps
+# Check once
+python3 scripts/service_tracker.py
 
-# Check specific agent logs
-docker logs webscraper-gateway
-docker logs webscraper-camoufox
+# Continuous monitoring
+python3 scripts/service_tracker.py --watch
+
+# JSON output
+python3 scripts/service_tracker.py --json
 ```
 
-### Memory Issues
+### Health Check Script
 
-Reduce models in `models.config` or increase Docker memory limits.
-
-### Browser Rendering Fails
-
-Camoufox requires shared memory. Ensure `shm_size: 2gb` in docker-compose.
-
----
-
-## 📊 Monitoring
-
-### Health Checks
+Quick health check:
 
 ```bash
-# Check all services
-curl http://your-domain:8000/health
-
-# Individual agents
-curl http://your-domain:8001/health  # Discovery
-curl http://your-domain:8002/health  # Camoufox
-curl http://your-domain:8003/health  # Vision
-curl http://your-domain:8004/health  # Extraction
+bash scripts/health-check.sh
 ```
 
-### View Logs
+## Development
+
+### Adding a New Service
+
+1. Add service to `services.json`
+2. Create service directory in `services/`
+3. Add Dockerfile and application code
+4. Update `coolify-manifest.yaml`
+5. Update documentation
+
+### Testing Locally
 
 ```bash
-# All services
-docker-compose logs -f
+# Start all services
+docker-compose -f docker-compose.local.yml up -d
 
-# Specific service
-docker-compose logs -f agent-gateway
+# View logs
+docker-compose -f docker-compose.local.yml logs -f [service-name]
+
+# Stop services
+docker-compose -f docker-compose.local.yml down
 ```
 
-### Database Queries
+## Troubleshooting
 
-```bash
-# Connect to MongoDB
-docker exec -it webscraper-mongodb mongosh -u admin -p your_password
+See **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** for common issues and solutions.
 
-# View jobs
-use webscraper
-db.jobs.find().limit(10)
+## Project Structure
+
+```
+prompt2dataset/
+├── services.json              # Service registry (source of truth)
+├── coolify-manifest.yaml      # Coolify deployment manifest
+├── docker-compose.local.yml   # Local development compose
+├── .gitignore                 # Git ignore rules
+│
+├── config/
+│   └── .env.example           # Environment template
+│
+├── services/
+│   ├── html-parser/           # HTML parsing service
+│   ├── extraction-agent/      # Data extraction agent
+│   ├── vision-agent/          # Vision analysis agent
+│   ├── orchestrator-agent/    # Workflow orchestrator
+│   └── discovery-agent/       # URL discovery & monitoring
+│
+├── scripts/
+│   ├── service_tracker.py     # Service monitoring tool
+│   ├── service_client.py      # Python SDK
+│   ├── setup.sh               # Setup script
+│   └── health-check.sh        # Quick health check
+│
+└── docs/
+    ├── DEPLOYMENT.md          # Deployment guide
+    ├── SERVICES.md            # Service documentation
+    ├── API_ENDPOINTS.md       # API reference
+    └── TROUBLESHOOTING.md     # Troubleshooting guide
 ```
 
----
+## Contributing
 
-## 🔐 Security Notes
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test locally with `docker-compose.local.yml`
+5. Submit a pull request
 
-1. **Change default passwords** in `.env`
-2. **Use HTTPS** in production (configure in Coolify)
-3. **Restrict ports** - Only expose 8000 and 5678 publicly
-4. **API authentication** - Add auth middleware to gateway
-5. **Rate limiting** - Configure in gateway or reverse proxy
+## License
 
----
+See [LICENSE](LICENSE) for details.
 
-## 📈 Scaling
+## Support
 
-### Horizontal Scaling
-
-In Coolify, increase replicas for:
-- `agent-camoufox` (most resource-intensive)
-- `agent-extraction` (parallel processing)
-- `agent-discovery` (concurrent crawling)
-
-### Vertical Scaling
-
-Allocate more resources:
-- Ollama: More RAM for larger models
-- Camoufox: More CPU for rendering
-- MongoDB: More disk for data storage
+- Issues: [GitHub Issues](https://github.com/yourusername/prompt2dataset/issues)
+- Documentation: [docs/](docs/)
+- Discussions: [GitHub Discussions](https://github.com/yourusername/prompt2dataset/discussions)
 
 ---
 
-## 🤝 Contributing Workflows
-
-Share your n8n workflows:
-
-1. Export workflow from n8n
-2. Add to `n8n-workflows/community/`
-3. Include README with use case
-4. Submit PR
-
----
-
-## 📄 License
-
-MIT License - See LICENSE file
-
----
-
-## 🙏 Credits
-
-- **Camoufox** - Anti-detection browser
-- **Ollama** - Local AI model serving
-- **n8n** - Workflow automation
-- **FastAPI** - API framework
-- **MongoDB** - Data storage
-
----
-
-## 📞 Support
-
-- **Issues**: GitHub Issues
-- **Discussions**: GitHub Discussions
-- **Documentation**: `/docs` folder
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Web UI for job management
-- [ ] Pre-built workflow templates marketplace
-- [ ] Proxy rotation support
-- [ ] Webhook integrations
-- [ ] Data export pipelines
-- [ ] Cost tracking & analytics
-- [ ] Multi-tenant support
-
----
-
-**Built for self-hosters who want powerful web scraping without SaaS lock-in.**
+**Built for self-hosting. Deploy anywhere. Own your data.**
