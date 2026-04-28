@@ -1,6 +1,8 @@
 # prompt2dataset (PDF → structured dataset)
 
-Canonical **application and Python package** for the Streamlit + Docling + LangGraph dataset builder. It lives under **ISF-PEECEE** next to the rest of your automation (`pipeline-scripts/`, `library/`, etc.).
+**Standalone repo:** `https://github.com/caussiaus/prompt2dataset` — same tree as under **ISF-PEECEE/prompt2dataset/** for this deployment.
+
+Canonical **application and Python package** for the Streamlit + Docling + LangGraph dataset builder. **Browser stack** is separate: **`~/scrape-arm`** → repo **`caussiaus/scrape-arm`** (HTTP only from here — see **`docs/SCRAPER_STACK.md`**).
 
 ## Layout
 

@@ -154,8 +154,8 @@ with tab_overview:
 with tab_scrape:
     st.markdown(
         "Embedded **grid_monitor** UI (live tiles + graph tab inside that app). "
-        "Start the monitor from WSL, repo `scrape-arm/`:  \n"
-        "`cd scrape-arm && python3 grid_monitor.py`  (port **7700** by default; env `GRID_MONITOR_PORT`)."
+        "Start the monitor from WSL, canonical **`~/scrape-arm`**:  \n"
+        "`cd ~/scrape-arm && python3 grid_monitor.py`  (port **7700** by default; env `GRID_MONITOR_PORT`)."
     )
     default_grid = (os.environ.get("GRID_MONITOR_URL") or "http://127.0.0.1:7700/").strip()
     grid_url = st.text_input("Grid monitor URL", value=default_grid, key="grid_monitor_url")
