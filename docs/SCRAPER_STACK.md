@@ -30,3 +30,13 @@ Set **`SCRAPER_BROWSER_AUTOMATION_ENABLED=1`** only when this process should dri
 ## VPS agents
 
 Clone **both** repos on the VPS for code work. **Running** Camoufox still targets **WSL** (SSH/tailnet) unless you intentionally port the stack.
+
+## Maintainer: push from ISF-PEECEE monorepo
+
+From **`ISF-PEECEE`** root (script lives in the monorepo, not inside this package):
+
+```bash
+bash scripts/prompt2dataset/publish-to-github.sh
+# Replace remote main entirely:
+# TAKEOVER=1 bash scripts/prompt2dataset/publish-to-github.sh
+```
