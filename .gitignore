@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.env
+.streamlit/secrets.toml
+output/
+state/
+logs/
+*.log
+
+# Large local corpora / PDFs / downloads — keep on WSL or ~/library; never push to GitHub.
+data/
