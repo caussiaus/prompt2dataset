@@ -1,0 +1,63 @@
+# Prompt-to-dataset (Streamlit workspace) — edit this file; changes apply on next Streamlit rerun.
+# Paths are relative to the pipeline repo root (ISF-PEECEE/prompt2dataset).
+#
+# Architecture (same single vLLM model id as AGENT/SCRAPE in shared-llm.env):
+#   • “Agent swarm” here = LangGraph phase workers (schema / extraction / critique), not
+#     a multi-model negotiating swarm on the wire (see dataset_graph/extraction_contract.py).
+#   • Optional critique.council_enabled: independent reviewers (epistemic lenses) + chairman
+#     merge for informational consensus before export/rework (critique_council.py).
+#   • “Group chat” = thread chat + LiveState injected into design/critique prompts, and
+#     one extraction pipeline per PDF (single-pass, or multipass blackboard: scout + synthesis when enabled).
+#   • RL / DPO / PRM data = append-only training_events.jsonl + output/feedback/{run_id}/;
+#     leave TRAINING_EVENTS_DISABLE unset (see training_events.py).
+
+# Post-extraction deterministic gate: substring + optional NLI before critique.
+grounding:
+  enabled: true
+  require_substring: true
+  use_nli: true
+
+wonder_queue:
+  max_pressure_to_enqueue: 5.0
+  max_entries_per_export: 200
+
+retrieval:
+  hunger_weight_retrieval: true
+  hunger_top_k_bonus: 8
+  anneal_walk_steps: 0
+
+critique:
+  # Max completion tokens for the quality-critique LLM call (wide schemas need headroom).
+  max_output_tokens: 4096
+  # Informational consensus: N parallel reviewers (distinct lenses) + chairman merge.
+  # Costs ~(N+1) critique LLM calls per run when true.
+  council_enabled: false
+  council_reviewer_count: 2
+  council_chairman_temperature: 0.15
+  # Optional per-reviewer sampling temperatures (list length ≥ council_reviewer_count).
+  # council_reviewer_temperatures: [0.28, 0.42]
+
+export:
+  # Truncate/normalize *_evidence_quote and *_exact_quote to this many characters in exported CSV.
+  quote_max_chars: 1200
+
+extraction:
+  # Optional guided JSON: top-level evidence_chains[] on extraction output (off by default).
+  evidence_chain_in_schema: false
+  # If true, system prompt requires <thinking>...</thinking> before JSON; disables guided JSON.
+  # Turn off for minimal latency / if the backend only supports strict json_object.
+  chain_of_thought: true
+  # Scout → targeted retrieve → Synthesis; doubles LLM calls per doc when on. Override: PROMPT2DATASET_EXTRACTION_MULTIPASS=1
+  multipass_blackboard: false
+  # Extra vector/BM25 retrieval round(s) after scout hypotheses (0 = no hop, 1 = one refinement pass)
+  max_refinement_hops: 1
+  # Chunks to merge in after a refinement query (deduped with initial pass)
+  refinement_evidence_blocks: 8
+
+streamlit:
+  # After a trial extraction finishes, automatically open the quality critique card.
+  auto_critique_after_trial: true
+  # Docs per UI tick × parallel HTTP calls. For ~27B on 24GB VRAM, start modest; raise if
+  # nvidia-smi shows headroom and vLLM stays healthy (OOM → lower both).
+  extraction_batch: 3
+  extraction_concurrency: 3
