@@ -48,7 +48,7 @@ extraction:
   # Turn off for minimal latency / if the backend only supports strict json_object.
   chain_of_thought: true
   # Scout → targeted retrieve → Synthesis; doubles LLM calls per doc when on. Override: PROMPT2DATASET_EXTRACTION_MULTIPASS=1
-  multipass_blackboard: false
+  multipass_blackboard: true
   # Extra vector/BM25 retrieval round(s) after scout hypotheses (0 = no hop, 1 = one refinement pass)
   max_refinement_hops: 1
   # Chunks to merge in after a refinement query (deduped with initial pass)
