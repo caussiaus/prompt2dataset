@@ -54,10 +54,10 @@ extraction:
   # Chunks to merge in after a refinement query (deduped with initial pass)
   refinement_evidence_blocks: 8
 
-streamlit:
-  # After a trial extraction finishes, automatically open the quality critique card.
-  auto_critique_after_trial: true
-  # Docs per UI tick × parallel HTTP calls. For ~27B on 24GB VRAM, start modest; raise if
-  # nvidia-smi shows headroom and vLLM stays healthy (OOM → lower both).
-  extraction_batch: 3
-  extraction_concurrency: 3
+
+output_format:
+  table_format: markdown # markdown or csv
+  validate_schema: true
+  truncate_rows: false
+  header_alignment: strict
+
